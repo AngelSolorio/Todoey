@@ -8,6 +8,7 @@
 
 import UIKit
 import CoreData
+import ChameleonFramework
 
 class TodoListViewController: UITableViewController, UISearchBarDelegate {
     var selectedCategory: Category? {
@@ -17,14 +18,28 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
     }
     var itemArray = [Item]()
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Sets the TableViewFooter to avoid extra separator lines in empty rows 
-        let footerView = UIView(frame: CGRect(x: 1.0, y: 1.0, width: 0.5, height: 0.5))
-        footerView.backgroundColor = .lightGray
-        tableView.tableFooterView = footerView
+        title = selectedCategory?.name ?? "Todo Items"
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        // Set the color on the search bar and navigation bar
+        if let bacgroundColor = UIColor(hexString: selectedCategory?.color), let textColor = UIColor(contrastingBlackOrWhiteColorOn: bacgroundColor, isFlat: true) {
+            searchBar.barTintColor = bacgroundColor
+            searchBar.tintColor = textColor
+
+            guard let navBar = navigationController?.navigationBar else {fatalError("Navigation Controller does not exists.")}
+            navBar.barTintColor = bacgroundColor
+            navBar.tintColor = textColor
+            navBar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: textColor]
+            navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor: textColor]
+            navBar.prefersLargeTitles = true
+            navigationItem.rightBarButtonItem?.tintColor = textColor
+        }
     }
 
 
@@ -39,6 +54,14 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
         let item = itemArray[indexPath.row]
         cell.textLabel?.text = item.title
         cell.accessoryType = item.done ? .checkmark : .none
+
+        // Set a gradient background color and contrasting text color
+        let darknessValue = (CGFloat(indexPath.row) / CGFloat(itemArray.count)) - 0.1
+        if let color = UIColor(hexString: selectedCategory?.color)?.darken(byPercentage: darknessValue) {
+            cell.backgroundColor = color
+            cell.textLabel?.textColor = UIColor(contrastingBlackOrWhiteColorOn: color, isFlat: true)
+            cell.tintColor = UIColor(contrastingBlackOrWhiteColorOn: color, isFlat: true)
+        }
 
         return cell
     }
@@ -101,13 +124,14 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
-        let cancelAction = UIAlertAction(title: "Cancel", style: .destructive, handler: { (action) in print("Cancel action")})
+        let cancelAction = UIAlertAction(title: "Cancel", style: .destructive, handler: nil)
         let addAction = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            print("Add action")
             if textField.text?.trimmingCharacters(in: .whitespacesAndNewlines) != "" {
+                // Create a new Item
                 let newItem = Item(context: self.context)
                 newItem.title = textField.text
                 newItem.parentCategory = self.selectedCategory
+
                 self.itemArray.append(newItem)
                 self.saveItems()
             }
@@ -160,4 +184,3 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
         loadItems(with: request)
     }
 }
-

@@ -8,6 +8,7 @@
 
 import UIKit
 import CoreData
+import ChameleonFramework
 
 class CategoryViewController: UITableViewController {
     var categoryArray = [Category]()
@@ -17,10 +18,18 @@ class CategoryViewController: UITableViewController {
         super.viewDidLoad()
 
         // Display an Edit button in the navigation bar for this view controller.
-        self.editButtonItem.tintColor = .white
-        self.navigationItem.leftBarButtonItem = self.editButtonItem
+        editButtonItem.tintColor = .white
+        navigationItem.leftBarButtonItem = editButtonItem
 
         loadCategories()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        // Customize the navigation bar
+        guard let navBar = self.navigationController?.navigationBar else {fatalError("Navigation Controller does not exists.")}
+        navBar.prefersLargeTitles = false
+        navBar.barTintColor = UIColor(hexString: "1D9BF6")
+        navBar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
     }
 
 
@@ -32,7 +41,13 @@ class CategoryViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        cell.textLabel?.text = categoryArray[indexPath.row].name
+        let category = categoryArray[indexPath.row]
+        let backgroundColor = UIColor(hexString: category.color)
+        let textColor = UIColor(contrastingBlackOrWhiteColorOn: backgroundColor, isFlat: true)
+        cell.textLabel?.text = category.name
+        cell.backgroundColor = backgroundColor
+        cell.textLabel?.textColor = textColor
+        cell.tintColor = textColor
 
         return cell
     }
@@ -110,8 +125,11 @@ class CategoryViewController: UITableViewController {
         let cancelAction = UIAlertAction(title: "Cancel", style: .destructive, handler: nil)
         let addAction = UIAlertAction(title: "Add", style: .default) { (action) in
             if textField.text?.trimmingCharacters(in: .whitespacesAndNewlines) != "" {
+                // Create a new Category
                 let newCategory = Category(context: self.context)
                 newCategory.name = textField.text
+                newCategory.color = UIColor(randomFlatColorOf: .light).hexValue()
+
                 self.categoryArray.append(newCategory)
                 self.saveCategories()
             }
