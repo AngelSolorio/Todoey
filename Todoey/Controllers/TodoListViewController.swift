@@ -9,6 +9,7 @@
 import UIKit
 import CoreData
 import ChameleonFramework
+import SwipeCellKit
 
 class TodoListViewController: UITableViewController, UISearchBarDelegate {
     var selectedCategory: Category? {
@@ -50,14 +51,16 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath) as! SwipeTableViewCell
         let item = itemArray[indexPath.row]
+        cell.delegate = self
         cell.textLabel?.text = item.title
         cell.accessoryType = item.done ? .checkmark : .none
 
         // Set a gradient background color and contrasting text color
-        let darknessValue = (CGFloat(indexPath.row) / CGFloat(itemArray.count)) - 0.1
-        if let color = UIColor(hexString: selectedCategory?.color)?.darken(byPercentage: darknessValue) {
+        let darkness = calculateDarkness(forIndex: indexPath.row)
+        print("Darness = \(darkness )")
+        if let color = UIColor(hexString: selectedCategory?.color)?.darken(byPercentage: darkness) {
             cell.backgroundColor = color
             cell.textLabel?.textColor = UIColor(contrastingBlackOrWhiteColorOn: color, isFlat: true)
             cell.tintColor = UIColor(contrastingBlackOrWhiteColorOn: color, isFlat: true)
@@ -66,30 +69,18 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
         return cell
     }
 
+    func calculateDarkness(forIndex index: Int) -> CGFloat {
+        if itemArray.count >= 10 {
+            return CGFloat(index) / CGFloat(itemArray.count)
+        } else {
+            return CGFloat(index) / 10.0
+        }
+    }
+
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         saveItems()
         tableView.deselectRow(at: indexPath, animated: true)
-    }
-
-    override func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
-        let deleteAction = UITableViewRowAction(style: .default, title: "Delete", handler: {
-            (action: UITableViewRowAction, indexPath: IndexPath) -> Void in
-            let alert = UIAlertController(title: nil, message: "Are you sure you want to DELETE this item?", preferredStyle: .actionSheet)
-            let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
-            let removeAction = UIAlertAction(title: "Delete", style: .destructive) { (action) in
-                self.context.delete(self.itemArray[indexPath.row])
-                self.itemArray.remove(at: indexPath.row)
-                self.tableView.reloadData()
-            }
-
-            alert.addAction(removeAction)
-            alert.addAction(cancelAction)
-
-            self.present(alert, animated: true, completion: nil)
-        })
-
-        return [deleteAction]
     }
 
 
@@ -182,5 +173,43 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
             request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
         }
         loadItems(with: request)
+    }
+}
+
+
+// MARK: - SwipeTableViewCell Delegate Methods
+
+extension TodoListViewController: SwipeTableViewCellDelegate {
+    func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> [SwipeAction]? {
+        guard orientation == .right else { return nil }
+
+        let deleteAction = SwipeAction(style: .destructive, title: "Delete", handler: {
+            (action: SwipeAction, indexPath: IndexPath) in
+            let message = "Are you sure you want to DELETE this item?"
+            let alert = UIAlertController(title: nil, message: message, preferredStyle: .actionSheet)
+            let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+            let removeAction = UIAlertAction(title: "Delete", style: .destructive) { (action) in
+                self.context.delete(self.itemArray[indexPath.row])
+                self.itemArray.remove(at: indexPath.row)
+                self.tableView.reloadData()
+            }
+
+            alert.addAction(removeAction)
+            alert.addAction(cancelAction)
+
+            self.present(alert, animated: true, completion: nil)
+        })
+
+        // customize the action appearance
+        deleteAction.image = UIImage(named: "delete-icon")
+
+        return [deleteAction]
+    }
+
+    func tableView(_ tableView: UITableView, editActionsOptionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> SwipeOptions {
+        var options = SwipeOptions()
+        options.expansionStyle = .destructive
+        options.transitionStyle = .border
+        return options
     }
 }
