@@ -10,8 +10,9 @@ import UIKit
 import CoreData
 import ChameleonFramework
 import SwipeCellKit
+import BEMCheckBox
 
-class TodoListViewController: UITableViewController, UISearchBarDelegate {
+class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCellDelegate {
     var selectedCategory: Category? {
         didSet {
             loadItems()
@@ -19,7 +20,11 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
     }
     var itemArray = [Item]()
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+
     @IBOutlet weak var searchBar: UISearchBar!
+
+
+    // MARK: - View Controller Lifecycle Methods
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -43,6 +48,11 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
         }
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        saveItems()
+    }
+
 
     // MARK: - Tableview Delegate and Datasource Methods
 
@@ -51,19 +61,24 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath) as! SwipeTableViewCell
+        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath) as! TodoTableViewCell
         let item = itemArray[indexPath.row]
         cell.delegate = self
-        cell.textLabel?.text = item.title
-        cell.accessoryType = item.done ? .checkmark : .none
+        cell.checkBoxDelegate = self
+        cell.itemIndex = indexPath.row
+        cell.title.text = item.title
+        cell.checkBox.setOn(item.done, animated: true)
 
         // Set a gradient background color and contrasting text color
         let darkness = calculateDarkness(forIndex: indexPath.row)
-        print("Darness = \(darkness )")
-        if let color = UIColor(hexString: selectedCategory?.color)?.darken(byPercentage: darkness) {
-            cell.backgroundColor = color
-            cell.textLabel?.textColor = UIColor(contrastingBlackOrWhiteColorOn: color, isFlat: true)
-            cell.tintColor = UIColor(contrastingBlackOrWhiteColorOn: color, isFlat: true)
+        if let backgroundColor = UIColor(hexString: selectedCategory?.color)?.darken(byPercentage: darkness), let textColor = UIColor(contrastingBlackOrWhiteColorOn: backgroundColor, isFlat: true) {
+            cell.title?.textColor = textColor
+            cell.tintColor = textColor
+            cell.backgroundColor = backgroundColor
+            cell.checkBox.tintColor = textColor
+            cell.checkBox.onTintColor = textColor
+            cell.checkBox.onFillColor = textColor
+            cell.checkBox.onCheckColor = backgroundColor
         }
 
         return cell
@@ -77,10 +92,12 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
         }
     }
 
-    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+
+    // MARK: - TodoCell Delegate Methods
+
+    func checkBoxTapped(cell: TodoTableViewCell) {
+        itemArray[cell.itemIndex].done = !itemArray[cell.itemIndex].done
         saveItems()
-        tableView.deselectRow(at: indexPath, animated: true)
     }
 
 
@@ -116,8 +133,9 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
         let cancelAction = UIAlertAction(title: "Cancel", style: .destructive, handler: nil)
-        let addAction = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            if textField.text?.trimmingCharacters(in: .whitespacesAndNewlines) != "" {
+        let addAction = UIAlertAction(title: "Add", style: .default) { (action) in
+            let text = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if text != "" {
                 // Create a new Item
                 let newItem = Item(context: self.context)
                 newItem.title = textField.text
@@ -185,22 +203,23 @@ extension TodoListViewController: SwipeTableViewCellDelegate {
 
         let deleteAction = SwipeAction(style: .destructive, title: "Delete", handler: {
             (action: SwipeAction, indexPath: IndexPath) in
+            // Display an Alert for confirmation
             let message = "Are you sure you want to DELETE this item?"
             let alert = UIAlertController(title: nil, message: message, preferredStyle: .actionSheet)
-            let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
-            let removeAction = UIAlertAction(title: "Delete", style: .destructive) { (action) in
+            let cancelBtn = UIAlertAction(title: "Cancel", style: .cancel) { (cancel) in
+                action.fulfill(with: .reset)
+            }
+            let removeBtn = UIAlertAction(title: "Delete", style: .destructive) { (remove) in
                 self.context.delete(self.itemArray[indexPath.row])
                 self.itemArray.remove(at: indexPath.row)
-                self.tableView.reloadData()
+                action.fulfill(with: .delete)
             }
-
-            alert.addAction(removeAction)
-            alert.addAction(cancelAction)
-
+            alert.addAction(removeBtn)
+            alert.addAction(cancelBtn)
             self.present(alert, animated: true, completion: nil)
         })
 
-        // customize the action appearance
+        // Customize the action appearance
         deleteAction.image = UIImage(named: "delete-icon")
 
         return [deleteAction]
@@ -208,7 +227,7 @@ extension TodoListViewController: SwipeTableViewCellDelegate {
 
     func tableView(_ tableView: UITableView, editActionsOptionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> SwipeOptions {
         var options = SwipeOptions()
-        options.expansionStyle = .destructive
+        options.expansionStyle = .destructive(automaticallyDelete: false)
         options.transitionStyle = .border
         return options
     }

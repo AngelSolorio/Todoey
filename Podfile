@@ -8,4 +8,5 @@ target 'Todoey' do
   # Pods for Todoey
   pod 'ChameleonFramework'
   pod 'SwipeCellKit'
+  pod 'BEMCheckBox'
 end

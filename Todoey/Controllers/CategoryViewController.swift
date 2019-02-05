@@ -13,7 +13,7 @@ import ChameleonFramework
 class CategoryViewController: UITableViewController {
     var categoryArray = [Category]()
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -36,18 +36,31 @@ class CategoryViewController: UITableViewController {
     // MARK: - Tableview Datasource Methods
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray.count
+        editButtonItem.isEnabled = categoryArray.count > 0 ? true : false
+        return categoryArray.count > 0 ? categoryArray.count : 1
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        let category = categoryArray[indexPath.row]
-        let backgroundColor = UIColor(hexString: category.color)
-        let textColor = UIColor(contrastingBlackOrWhiteColorOn: backgroundColor, isFlat: true)
-        cell.textLabel?.text = category.name
-        cell.backgroundColor = backgroundColor
-        cell.textLabel?.textColor = textColor
-        cell.tintColor = textColor
+        if categoryArray.count > 0 {
+            // Customize cells to display the Categories
+            let category = categoryArray[indexPath.row]
+            let backgroundColor = UIColor(hexString: category.color)
+            let textColor = UIColor(contrastingBlackOrWhiteColorOn: backgroundColor, isFlat: true)
+            cell.textLabel?.text = category.name
+            cell.textLabel?.textColor = textColor
+            cell.textLabel?.textAlignment = .left
+            cell.backgroundColor = backgroundColor
+            cell.tintColor = textColor
+            cell.accessoryType = .disclosureIndicator
+        } else {
+            // Customize a cell to display a message to the user to a a new Category
+            cell.textLabel?.text = "Add a new Category tapping on the + button."
+            cell.textLabel?.textColor = UIColor.gray
+            cell.textLabel?.textAlignment = .center
+            cell.backgroundColor = .clear
+            cell.accessoryType = .none
+        }
 
         return cell
     }
@@ -56,8 +69,10 @@ class CategoryViewController: UITableViewController {
     // MARK: - Tableview Delegate Methods
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        performSegue(withIdentifier: "goToItems", sender: self)
-        tableView.deselectRow(at: indexPath, animated: true)
+        if categoryArray.count > 0 {
+            performSegue(withIdentifier: "goToItems", sender: self)
+            tableView.deselectRow(at: indexPath, animated: true)
+        }
     }
 
     // Support conditional rearranging of the table view.
@@ -65,28 +80,30 @@ class CategoryViewController: UITableViewController {
         return true
     }
 
-     // Support rearranging the table view.
-     override func tableView(_ tableView: UITableView, moveRowAt fromIndexPath: IndexPath, to: IndexPath) {
+    // Support rearranging the table view.
+    override func tableView(_ tableView: UITableView, moveRowAt fromIndexPath: IndexPath, to: IndexPath) {
         tableView.moveRow(at: fromIndexPath, to: to)
         let element = categoryArray.remove(at: fromIndexPath.row)
         categoryArray.insert(element, at: to.row)
         saveCategories()
-     }
+        tableView.reloadData()
+    }
 
     // Support conditional editing of the table view.
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        return true
+        return categoryArray.count > 0 ? true : false
     }
 
     // Support editing the table view.
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
+        if editingStyle == .delete && categoryArray.count > 0 {
             let alert = UIAlertController(title: nil, message: "Are you sure you want to DELETE this Category?", preferredStyle: .actionSheet)
             let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
             let removeAction = UIAlertAction(title: "Delete", style: .destructive) { (action) in
                 self.context.delete(self.categoryArray[indexPath.row])
                 self.categoryArray.remove(at: indexPath.row)
-                self.tableView.deleteRows(at: [indexPath], with: .fade)
+                self.saveCategories()
+                self.tableView.reloadData()
             }
             alert.addAction(removeAction)
             alert.addAction(cancelAction)
@@ -113,7 +130,6 @@ class CategoryViewController: UITableViewController {
         } catch {
             print("Error saving data in context \(error)")
         }
-        tableView.reloadData()
     }
 
 
@@ -124,14 +140,16 @@ class CategoryViewController: UITableViewController {
         let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
         let cancelAction = UIAlertAction(title: "Cancel", style: .destructive, handler: nil)
         let addAction = UIAlertAction(title: "Add", style: .default) { (action) in
-            if textField.text?.trimmingCharacters(in: .whitespacesAndNewlines) != "" {
+            let text = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if text != "" {
                 // Create a new Category
                 let newCategory = Category(context: self.context)
-                newCategory.name = textField.text
+                newCategory.name = text
                 newCategory.color = UIColor(randomFlatColorOf: .light).hexValue()
 
                 self.categoryArray.append(newCategory)
                 self.saveCategories()
+                self.tableView.reloadData()
             }
         }
         alert.addTextField { (alertTextField) in

@@ -13,20 +13,20 @@
         <scene sceneID="2Kr-ZE-BNf">
             <objects>
                 <tableViewController id="yg0-kX-ndd" customClass="CategoryViewController" customModule="Todoey" customModuleProvider="target" sceneMemberID="viewController">
-                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="none" rowHeight="60" sectionHeaderHeight="28" sectionFooterHeight="28" id="CTd-Za-osV">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="none" rowHeight="70" sectionHeaderHeight="28" sectionFooterHeight="28" id="CTd-Za-osV">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <prototypes>
-                            <tableViewCell opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" reuseIdentifier="CategoryCell" textLabel="chL-aK-IOI" rowHeight="60" style="IBUITableViewCellStyleDefault" id="cPx-oW-iAc">
-                                <rect key="frame" x="0.0" y="28" width="375" height="60"/>
+                            <tableViewCell opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" accessoryType="disclosureIndicator" indentationWidth="10" reuseIdentifier="CategoryCell" textLabel="chL-aK-IOI" style="IBUITableViewCellStyleDefault" id="cPx-oW-iAc">
+                                <rect key="frame" x="0.0" y="28" width="375" height="70"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="cPx-oW-iAc" id="WuR-TQ-xSr">
-                                    <rect key="frame" x="0.0" y="0.0" width="341" height="60"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="341" height="70"/>
                                     <autoresizingMask key="autoresizingMask"/>
                                     <subviews>
                                         <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" insetsLayoutMarginsFromSafeArea="NO" text="Title" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="chL-aK-IOI">
-                                            <rect key="frame" x="16" y="0.0" width="324" height="60"/>
+                                            <rect key="frame" x="16" y="0.0" width="324" height="70"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                             <nil key="textColor"/>
@@ -56,13 +56,13 @@
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="mX3-qh-wUD" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-76" y="107"/>
+            <point key="canvasLocation" x="-76" y="106.59670164917542"/>
         </scene>
-        <!--Items-->
+        <!--Delegate-->
         <scene sceneID="vwj-HP-jOZ">
             <objects>
                 <tableViewController id="cJ7-Tt-O9K" customClass="TodoListViewController" customModule="Todoey" customModuleProvider="target" sceneMemberID="viewController">
-                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="none" rowHeight="70" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" id="HGd-S7-nq6">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="none" allowsSelection="NO" rowHeight="70" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" id="HGd-S7-nq6">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -79,13 +79,43 @@
                             </connections>
                         </searchBar>
                         <prototypes>
-                            <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="TodoItemCell" id="s4S-nD-Vfe" customClass="SwipeTableViewCell" customModule="SwipeCellKit">
+                            <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" reuseIdentifier="TodoItemCell" id="s4S-nD-Vfe" customClass="TodoTableViewCell" customModule="Todoey">
                                 <rect key="frame" x="0.0" y="84" width="375" height="70"/>
                                 <autoresizingMask key="autoresizingMask"/>
                                 <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="s4S-nD-Vfe" id="cZD-Ns-uYX">
                                     <rect key="frame" x="0.0" y="0.0" width="375" height="70"/>
                                     <autoresizingMask key="autoresizingMask"/>
+                                    <subviews>
+                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" preservesSuperviewLayoutMargins="YES" text="Title" lineBreakMode="tailTruncation" numberOfLines="2" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="xPL-of-El8" userLabel="Title">
+                                            <rect key="frame" x="51" y="11" width="308" height="48"/>
+                                            <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                            <nil key="textColor"/>
+                                            <nil key="highlightedColor"/>
+                                        </label>
+                                        <view contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" translatesAutoresizingMaskIntoConstraints="NO" id="MD2-Ft-r1M" customClass="BEMCheckBox">
+                                            <rect key="frame" x="11" y="25" width="20" height="20"/>
+                                            <constraints>
+                                                <constraint firstAttribute="height" constant="20" id="KV0-Ba-lre"/>
+                                                <constraint firstAttribute="width" constant="20" id="wHu-Gq-D20"/>
+                                            </constraints>
+                                            <connections>
+                                                <outlet property="delegate" destination="cJ7-Tt-O9K" id="Jmg-a5-3xs"/>
+                                            </connections>
+                                        </view>
+                                    </subviews>
+                                    <constraints>
+                                        <constraint firstItem="xPL-of-El8" firstAttribute="top" secondItem="cZD-Ns-uYX" secondAttribute="topMargin" id="OMK-iL-g1V"/>
+                                        <constraint firstItem="MD2-Ft-r1M" firstAttribute="centerY" secondItem="cZD-Ns-uYX" secondAttribute="centerY" id="Rhg-OG-WJl"/>
+                                        <constraint firstItem="xPL-of-El8" firstAttribute="leading" secondItem="MD2-Ft-r1M" secondAttribute="trailing" constant="20" id="Zi3-6l-9E7"/>
+                                        <constraint firstItem="MD2-Ft-r1M" firstAttribute="leading" secondItem="cZD-Ns-uYX" secondAttribute="leadingMargin" constant="-5" id="cRO-Q7-7sV"/>
+                                        <constraint firstItem="xPL-of-El8" firstAttribute="trailing" secondItem="cZD-Ns-uYX" secondAttribute="trailingMargin" id="eJ3-BV-D1q"/>
+                                        <constraint firstItem="xPL-of-El8" firstAttribute="bottom" secondItem="cZD-Ns-uYX" secondAttribute="bottomMargin" id="qKL-nV-7ts"/>
+                                    </constraints>
                                 </tableViewCellContentView>
+                                <connections>
+                                    <outlet property="checkBox" destination="MD2-Ft-r1M" id="Y7A-Pm-9CJ"/>
+                                    <outlet property="title" destination="xPL-of-El8" id="Hum-ve-IAk"/>
+                                </connections>
                             </tableViewCell>
                         </prototypes>
                         <connections>
@@ -107,7 +137,7 @@
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="8Xy-J1-CXQ" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="700" y="107"/>
+            <point key="canvasLocation" x="700" y="106.59670164917542"/>
         </scene>
         <!--Navigation Controller-->
         <scene sceneID="K76-Q0-Fde">
