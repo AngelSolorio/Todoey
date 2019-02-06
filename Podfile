@@ -9,4 +9,5 @@ target 'Todoey' do
   pod 'ChameleonFramework'
   pod 'SwipeCellKit'
   pod 'BEMCheckBox'
+  pod 'RealmSwift'
 end
