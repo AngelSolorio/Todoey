@@ -7,17 +7,11 @@
 //
 
 import Foundation
+import RealmSwift
 
-//class Item: Codable {
-//    var title: String = ""
-//    var done: Bool = false
-//
-//    init(title: String) {
-//        self.title = title
-//    }
-//
-//    init(title: String, isDone: Bool) {
-//        self.title = title
-//        self.done = isDone
-//    }
-//}
+class Item: Object {
+    @objc dynamic var title: String = ""
+    @objc dynamic var done: Bool = false
+    @objc dynamic var dateCreated: Date = Date.init()
+    var parentCategory = LinkingObjects(fromType: Category.self, property: "items")
+}

@@ -7,12 +7,12 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 import ChameleonFramework
 
 class CategoryViewController: UITableViewController {
-    var categoryArray = [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
+    var categories: Results<Category>?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -36,15 +36,15 @@ class CategoryViewController: UITableViewController {
     // MARK: - Tableview Datasource Methods
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        editButtonItem.isEnabled = categoryArray.count > 0 ? true : false
-        return categoryArray.count > 0 ? categoryArray.count : 1
+        editButtonItem.isEnabled = categories?.count ?? 0 > 0 ? true : false
+        return categories?.count ?? 0 > 0 ? categories!.count : 1
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        if categoryArray.count > 0 {
+        if categories?.count ?? 0 > 0 {
             // Customize cells to display the Categories
-            let category = categoryArray[indexPath.row]
+            let category = categories![indexPath.row]
             let backgroundColor = UIColor(hexString: category.color)
             let textColor = UIColor(contrastingBlackOrWhiteColorOn: backgroundColor, isFlat: true)
             cell.textLabel?.text = category.name
@@ -69,7 +69,7 @@ class CategoryViewController: UITableViewController {
     // MARK: - Tableview Delegate Methods
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        if categoryArray.count > 0 {
+        if categories?.count ?? 0 > 0 {
             performSegue(withIdentifier: "goToItems", sender: self)
             tableView.deselectRow(at: indexPath, animated: true)
         }
@@ -83,26 +83,22 @@ class CategoryViewController: UITableViewController {
     // Support rearranging the table view.
     override func tableView(_ tableView: UITableView, moveRowAt fromIndexPath: IndexPath, to: IndexPath) {
         tableView.moveRow(at: fromIndexPath, to: to)
-        let element = categoryArray.remove(at: fromIndexPath.row)
-        categoryArray.insert(element, at: to.row)
-        saveCategories()
+        moveCategory(fromIndex: fromIndexPath.row, toIndex: to.row)
         tableView.reloadData()
     }
 
     // Support conditional editing of the table view.
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        return categoryArray.count > 0 ? true : false
+        return categories?.count ?? 0 > 0 ? true : false
     }
 
     // Support editing the table view.
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete && categoryArray.count > 0 {
+        if editingStyle == .delete && categories?.count ?? 0 > 0 {
             let alert = UIAlertController(title: nil, message: "Are you sure you want to DELETE this Category?", preferredStyle: .actionSheet)
             let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
             let removeAction = UIAlertAction(title: "Delete", style: .destructive) { (action) in
-                self.context.delete(self.categoryArray[indexPath.row])
-                self.categoryArray.remove(at: indexPath.row)
-                self.saveCategories()
+                self.deleteCategory(atIndex: indexPath.row)
                 self.tableView.reloadData()
             }
             alert.addAction(removeAction)
@@ -115,20 +111,52 @@ class CategoryViewController: UITableViewController {
 
     // MARK: - Data Manipulation Methods
 
-    func loadCategories(with request: NSFetchRequest<Category> = Category.fetchRequest()) {
-        do {
-            categoryArray = try context.fetch(request)
-        } catch  {
-            print("Error fetching data from context \(error)")
-        }
+    func loadCategories() {
+        categories = realm.objects(Category.self).sorted(byKeyPath: "index", ascending: true)
         tableView.reloadData()
     }
 
-    func saveCategories() {
+    func save(category: Category) {
+        let nextIndex = (realm.objects(Category.self).max(ofProperty: "index") as Int? ?? 0) + 1
+        category.index = nextIndex
+
         do {
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
         } catch {
-            print("Error saving data in context \(error)")
+            print("Error saving data in Realm, \(error)")
+        }
+    }
+
+    func deleteCategory(atIndex index: Int) {
+        if let category = categories?[index] {
+            do {
+                try realm.write {
+                    realm.delete(category)
+                }
+            } catch {
+                print("Error deleting a Category in realm, \(error)")
+            }
+        }
+    }
+
+    func moveCategory(fromIndex: Int, toIndex: Int) {
+        guard fromIndex != toIndex else { return }
+        if let categoryMoved = categories?[fromIndex] {
+            let isMovingUp = fromIndex > toIndex ? true : false
+            let predicate = isMovingUp ? "index BETWEEN {\(toIndex + 1), \(fromIndex)}" : "index BETWEEN {\(fromIndex + 2), \(toIndex + 1)}"
+            let rowsToMove = realm.objects(Category.self).filter(predicate)
+            do {
+                try realm.write {
+                    for category in rowsToMove {
+                        category.index = isMovingUp ? category.index + 1 : category.index - 1
+                    }
+                    categoryMoved.index = toIndex + 1
+                }
+            } catch {
+                print("Error moving a Category in realm, \(error)")
+            }
         }
     }
 
@@ -141,14 +169,13 @@ class CategoryViewController: UITableViewController {
         let cancelAction = UIAlertAction(title: "Cancel", style: .destructive, handler: nil)
         let addAction = UIAlertAction(title: "Add", style: .default) { (action) in
             let text = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
-            if text != "" {
+            if text != nil && text != "" {
                 // Create a new Category
-                let newCategory = Category(context: self.context)
-                newCategory.name = text
+                let newCategory = Category()
+                newCategory.name = text!
                 newCategory.color = UIColor(randomFlatColorOf: .light).hexValue()
 
-                self.categoryArray.append(newCategory)
-                self.saveCategories()
+                self.save(category: newCategory)
                 self.tableView.reloadData()
             }
         }
@@ -173,7 +200,7 @@ class CategoryViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationVC = segue.destination as! TodoListViewController
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
 }

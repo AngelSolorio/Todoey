@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 import ChameleonFramework
 import SwipeCellKit
 import BEMCheckBox
@@ -18,8 +18,8 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCe
             loadItems()
         }
     }
-    var itemArray = [Item]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var todoItems: Results<Item>?
+    let realm = try! Realm()
 
     @IBOutlet weak var searchBar: UISearchBar!
 
@@ -33,11 +33,12 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCe
     }
 
     override func viewWillAppear(_ animated: Bool) {
-        // Set the color on the search bar and navigation bar
         if let bacgroundColor = UIColor(hexString: selectedCategory?.color), let textColor = UIColor(contrastingBlackOrWhiteColorOn: bacgroundColor, isFlat: true) {
+            // Customize the search bar
             searchBar.barTintColor = bacgroundColor
             searchBar.tintColor = textColor
 
+            // Customize the navigation bar
             guard let navBar = navigationController?.navigationBar else {fatalError("Navigation Controller does not exists.")}
             navBar.barTintColor = bacgroundColor
             navBar.tintColor = textColor
@@ -48,26 +49,22 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCe
         }
     }
 
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        saveItems()
-    }
-
 
     // MARK: - Tableview Delegate and Datasource Methods
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return itemArray.count
+        return todoItems?.count ?? 0
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath) as! TodoTableViewCell
-        let item = itemArray[indexPath.row]
         cell.delegate = self
         cell.checkBoxDelegate = self
         cell.itemIndex = indexPath.row
-        cell.title.text = item.title
-        cell.checkBox.setOn(item.done, animated: true)
+        if let item = todoItems?[indexPath.row] {
+            cell.title.text = item.title
+            cell.checkBox.setOn(item.done, animated: true)
+        }
 
         // Set a gradient background color and contrasting text color
         let darkness = calculateDarkness(forIndex: indexPath.row)
@@ -85,8 +82,8 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCe
     }
 
     func calculateDarkness(forIndex index: Int) -> CGFloat {
-        if itemArray.count >= 10 {
-            return CGFloat(index) / CGFloat(itemArray.count)
+        if todoItems?.count ?? 0 >= 10 {
+            return CGFloat(index) / CGFloat(todoItems!.count)
         } else {
             return CGFloat(index) / 10.0
         }
@@ -96,8 +93,8 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCe
     // MARK: - TodoCell Delegate Methods
 
     func checkBoxTapped(cell: TodoTableViewCell) {
-        itemArray[cell.itemIndex].done = !itemArray[cell.itemIndex].done
-        saveItems()
+        updateItem(atIndex: cell.itemIndex)
+        tableView.reloadRows(at: [IndexPath(row: cell.itemIndex, section: 0)], with: .automatic)
     }
 
 
@@ -119,7 +116,7 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCe
     }
 
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        filterItems(by: searchText)
+        filterItems(by: searchText.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
@@ -135,17 +132,15 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCe
         let cancelAction = UIAlertAction(title: "Cancel", style: .destructive, handler: nil)
         let addAction = UIAlertAction(title: "Add", style: .default) { (action) in
             let text = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines)
-            if text != "" {
+            if text != nil && text != "" {
                 // Create a new Item
-                let newItem = Item(context: self.context)
-                newItem.title = textField.text
-                newItem.parentCategory = self.selectedCategory
-
-                self.itemArray.append(newItem)
-                self.saveItems()
+                let newItem = Item()
+                newItem.title = text!
+                self.saveItem(newItem)
             }
         }
         alert.addTextField { (alertTextField) in
+            // Customize a textField
             alertTextField.placeholder = "Create new item"
             alertTextField.autocapitalizationType = .sentences
             alertTextField.enablesReturnKeyAutomatically = true
@@ -159,38 +154,56 @@ class TodoListViewController: UITableViewController, UISearchBarDelegate, TodoCe
     }
 
 
-    // MARK: - Core Data Methods
+    // MARK: - Realm Methods
 
-    func saveItems() {
-        do {
-            try context.save()
-        } catch {
-            print("Error saving context \(error)")
+    func saveItem(_ item: Item) {
+        if let currentCategory = self.selectedCategory {
+            do {
+                try self.realm.write {
+                    realm.add(item)
+                    currentCategory.items.append(item)
+                }
+            } catch {
+                print("Error saving a new Item in realm, \(error)")
+            }
+            tableView.reloadData()
         }
+    }
+
+    func deleteItem(_ item: Item) {
+        do {
+            try realm.write {
+                realm.delete(item)
+            }
+        } catch {
+            print("Error deleting Item in realm, \(error)")
+        }
+    }
+
+    func updateItem(atIndex index: Int) {
+        if let item = todoItems?[index] {
+            do {
+                try realm.write {
+                    item.done = !item.done
+                }
+            } catch {
+                print("Error updating Item in realm, \(error)")
+            }
+        }
+    }
+
+    func loadItems() {
+        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
         tableView.reloadData()
     }
 
-    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()) {
-        if request.predicate == nil {
-            request.predicate = NSPredicate(format: "parentCategory == %@", selectedCategory!)
-            request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+    func filterItems(by searchText: String = "") {
+        if searchText != "" {
+            todoItems = selectedCategory?.items.filter("title CONTAINS[cd] %@", searchText).sorted(byKeyPath: "dateCreated", ascending: true)
+            tableView.reloadData()
+        } else {
+            loadItems()
         }
-
-        do {
-            itemArray = try context.fetch(request)
-        } catch {
-            print("Error fetching data from context \(error)")
-        }
-        tableView.reloadData()
-    }
-
-    func filterItems(by searchText: String) {
-        let request: NSFetchRequest<Item> = Item.fetchRequest()
-        if searchText.trimmingCharacters(in: .whitespacesAndNewlines) != "" {
-            request.predicate = NSPredicate(format: "title CONTAINS[cd] %@ AND parentCategory.name MATCHES %@", searchText, selectedCategory!.name!)
-            request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        }
-        loadItems(with: request)
     }
 }
 
@@ -210,9 +223,10 @@ extension TodoListViewController: SwipeTableViewCellDelegate {
                 action.fulfill(with: .reset)
             }
             let removeBtn = UIAlertAction(title: "Delete", style: .destructive) { (remove) in
-                self.context.delete(self.itemArray[indexPath.row])
-                self.itemArray.remove(at: indexPath.row)
-                action.fulfill(with: .delete)
+                if let item = self.todoItems?[indexPath.row] {
+                    self.deleteItem(item)
+                    action.fulfill(with: .delete)
+                }
             }
             alert.addAction(removeBtn)
             alert.addAction(cancelBtn)
